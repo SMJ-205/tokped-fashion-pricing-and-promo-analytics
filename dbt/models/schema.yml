@@ -2,10 +2,15 @@ version: 2
 
 models:
   - name: stg_listings
-    description: "Staging layer — raw CSV parsed dan di-flag. Semua kategori."
+    description: "Staging layer — raw CSV parsed dan di-flag. Semua kategori lintas platform."
     columns:
+      - name: listing_id
+        description: "Surrogate key: md5(product_url || nama_produk) — handle truncated URLs"
+        tests:
+          - unique
+          - not_null
       - name: product_url
-        description: "URL produk (unique identifier)"
+        description: "URL produk (bisa truncated ke URL toko untuk ~73 baris)"
         tests:
           - not_null
       - name: harga
@@ -22,7 +27,7 @@ models:
   - name: int_clean_listings
     description: "Intermediate — exclude placeholder & baris harga=0; normalisasi lokasi → wilayah."
     columns:
-      - name: product_url
+      - name: listing_id
         tests:
           - unique
           - not_null
@@ -35,7 +40,7 @@ models:
   - name: fct_listing
     description: "Mart — feature engineering lengkap: kategori, tier harga, flag spesifikasi."
     columns:
-      - name: product_url
+      - name: listing_id
         tests:
           - unique
           - not_null

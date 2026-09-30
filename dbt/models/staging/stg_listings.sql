@@ -8,41 +8,51 @@
 with raw as (
 
     select * from read_csv_auto(
-        '{{ env_var("DBT_CSV_PATH", "../data/raw/tokopedia_listings.csv") }}',
+        '{{ env_var("DBT_CSV_PATH", "../data/raw/produk_tokopedia.csv") }}',
         header = true,
         nullstr = ['', 'NULL', 'null', 'None']
     )
 
 ),
 
+-- Deduplicate: data asli memiliki baris identik (URL + nama sama persis)
+-- Ambil baris pertama per (URL, nama); baris duplikat di-drop
+deduped as (
+
+    select *
+    from (
+        select *,
+            row_number() over (
+                partition by "Produk URL", "Nama Produk"
+                order by "Harga (IDR)" desc
+            ) as _row_num
+        from raw
+    )
+    where _row_num = 1
+
+),
+
 parsed as (
 
     select
+        -- ── Surrogate key (md5 URL+nama — handle truncated URLs di data asli) ──
+        md5(coalesce("Produk URL", '') || '|' || coalesce("Nama Produk", ''))  as listing_id,
+
         -- ── Identifiers ──────────────────────────────────────────────────────
-        "Produk URL"                                                     as product_url,
+        "Produk URL"                                                    as product_url,
 
         -- ── Text fields ──────────────────────────────────────────────────────
-        "Nama Produk"                                                    as nama_produk,
-        "Nama Toko"                                                      as nama_toko,
-        "Lokasi Toko"                                                    as lokasi_raw,
+        "Nama Produk"                                                   as nama_produk,
+        "Nama Toko"                                                     as nama_toko,
+        "Lokasi Toko"                                                   as lokasi_raw,
 
-        -- ── Diskon → float (kosong/null = 0) ─────────────────────────────────
-        coalesce(try_cast("Diskon (%)" as double), 0.0)                  as diskon_pct,
+        -- ── Diskon → float (kosong/null = 0) ──────────────────────────────
+        coalesce(try_cast("Diskon (%)" as double), 0.0)                 as diskon_pct,
 
-        -- ── Harga (sudah integer dari CSV) ───────────────────────────────────
-        try_cast("Harga (IDR)" as integer)                               as harga,
+        -- ── Harga ──────────────────────────────────────────────────────────
+        try_cast("Harga (IDR)" as integer)                              as harga,
 
-        -- ── Harga Normal (sebelum diskon) ────────────────────────────────────
-        case
-            when coalesce(try_cast("Diskon (%)" as double), 0) > 0
-            then try_cast("Harga (IDR)" as integer)
-                 / (1.0 - coalesce(try_cast("Diskon (%)" as double), 0) / 100.0)
-            else try_cast("Harga (IDR)" as integer)
-        end                                                              as harga_normal,
-
-        -- ── Terjual: parse format 'Xrb+', '3.5rb', '200 terjual', dll ────────
-        -- Step 1: lowercase & strip spaces/+
-        -- Step 2: if contains 'rb' → extract number * 1000, else extract plain int
+        -- ── Terjual: parse 'Xrb+', '3.5rb', '200 terjual', dll ────────────
         case
             when regexp_extract(lower(regexp_replace("Terjual", '\s+', '', 'g')), '(\d+\.?\d*)rb', 1) <> ''
             then cast(
@@ -52,9 +62,9 @@ parsed as (
             when regexp_extract(coalesce("Terjual", ''), '(\d+)', 1) <> ''
             then cast(regexp_extract("Terjual", '(\d+)', 1) as integer)
             else 0
-        end                                                              as terjual,
+        end                                                             as terjual,
 
-        -- ── Jumlah Ulasan: parse format serupa ───────────────────────────────
+        -- ── Jumlah Ulasan: parse format serupa ───────────────────────────
         case
             when regexp_extract(lower(regexp_replace(coalesce("Jumlah Ulasan", ''), '\s+', '', 'g')), '(\d+\.?\d*)rb', 1) <> ''
             then cast(
@@ -64,12 +74,12 @@ parsed as (
             when regexp_extract(coalesce("Jumlah Ulasan", '0'), '(\d+)', 1) <> ''
             then cast(regexp_extract(coalesce("Jumlah Ulasan", '0'), '(\d+)', 1) as integer)
             else 0
-        end                                                              as jumlah_ulasan,
+        end                                                             as jumlah_ulasan,
 
-        -- ── Rating (0 → NULL jika ulasan = 0) ────────────────────────────────
-        "Rating"                                                         as rating_raw
+        -- ── Rating raw (null-handling di with_flags) ──────────────────────
+        "Rating"                                                        as rating_raw
 
-    from raw
+    from deduped
 
 ),
 
@@ -82,26 +92,40 @@ with_flags as (
         case
             when rating_raw = 0 and jumlah_ulasan = 0 then null
             else rating_raw
-        end                                                              as rating,
+        end                                                             as rating,
 
-        -- Harga Normal yang sudah di-round
-        round(harga_normal)                                              as harga_normal_idr,
+        -- Harga Normal (sebelum diskon), di-round ke integer
+        round(
+            case
+                when diskon_pct > 0
+                then harga / (1.0 - diskon_pct / 100.0)
+                else harga
+            end
+        )::integer                                                      as harga_normal,
 
-        -- ── Flag: Placeholder row ─────────────────────────────────────────────
+        -- ── Flag: Placeholder row ─────────────────────────────────────────
         (
             lower(nama_toko) like '%tokopedia seller%'
             or lower(product_url) like '%/search%'
             or lower(product_url) like '%/kategori%'
             or product_url like '%q=%'
-        )                                                                as is_placeholder,
+        )                                                               as is_placeholder,
 
-        -- ── Flag: Official store ──────────────────────────────────────────────
-        lower(nama_toko) like '%official store%'
-        or lower(nama_toko) like '%official shop%'
-        or lower(nama_toko) like '%official%'                           as is_official_store,
+        -- ── Flag: Truncated URL (share URL toko, bukan URL produk spesifik)
+        (
+            length(product_url) < 45
+            or product_url not like '%//%/%/%'
+        )                                                               as is_truncated_url,
 
-        -- ── Flag: Imputed (ulasan == terjual — suspicious) ───────────────────
-        (jumlah_ulasan > 0 and jumlah_ulasan = terjual)                 as is_imputed
+        -- ── Flag: Official store ──────────────────────────────────────────
+        (
+            lower(nama_toko) like '%official store%'
+            or lower(nama_toko) like '%official shop%'
+            or lower(nama_toko) like '%official%'
+        )                                                               as is_official_store,
+
+        -- ── Flag: Imputed (ulasan == terjual — suspicious) ───────────────
+        (jumlah_ulasan > 0 and jumlah_ulasan = terjual)                as is_imputed
 
     from parsed
 
@@ -110,24 +134,26 @@ with_flags as (
 with_derived as (
 
     select
+        listing_id,
         product_url,
         nama_produk,
         nama_toko,
         lokasi_raw,
         harga,
-        round(harga_normal_idr)::integer                                as harga_normal,
+        harga_normal,
         diskon_pct,
         terjual,
         jumlah_ulasan,
         rating,
         is_placeholder,
+        is_truncated_url,
         is_official_store,
         is_imputed,
 
-        -- GMV proxy (BIGINT to avoid INT32 overflow on large harga*terjual)
+        -- GMV proxy (BIGINT to avoid INT32 overflow)
         (cast(harga as bigint) * cast(terjual as bigint))              as gmv_proxy,
 
-        -- Bucket diskon (label ordinal)
+        -- Bucket diskon (label)
         case
             when diskon_pct = 0               then '0%'
             when diskon_pct <= 10             then '1-10%'

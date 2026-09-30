@@ -144,6 +144,7 @@ final as (
 
     select
         -- ── Core ──────────────────────────────────────────────────────────────
+        listing_id,
         product_url,
         nama_produk,
         nama_toko,

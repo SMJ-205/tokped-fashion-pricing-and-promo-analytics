@@ -18,38 +18,56 @@
 
 ---
 
-## Temuan Awal (dari Data Card Kaggle — diverifikasi ulang di notebook)
+## Temuan Awal (Diverifikasi dari Data Asli)
 
 | Temuan | Nilai dari Data Card | Nilai Terverifikasi | Dampak |
 |---|---|---|---|
-| Total baris | 29.519 | — | — |
-| Kolom | 9 | — | — |
-| Listing diskon < 5% | ~69% | — | Analisis diskon hanya ~31% listing |
-| Rating 4.75–5.0 | ~83% | — | H3 berisiko; fallback: pakai ulasan |
-| Lokasi "Indonesia" | ~10% | — | Exclude dari analisis wilayah |
-| Placeholder `Tokopedia Seller` | ~4% | — | Flag & exclude |
-| Baris imputasi (ulasan == terjual) | Beberapa | — | Flag & uji sensitifitas |
+| Total baris raw | 29.519 | 29.519 | — |
+| Baris duplikat (URL+nama identik) | Tidak diketahui | 510 | Di-dedup di staging (ambil 1 per grup) |
+| Listing diskon = 0% | ~69% | 61.6% | Analisis diskon pada 38.4% listing |
+| Rating std dev | — | 0.24 | H3 bisa diuji ✅ |
+| Rating 4.75–5.0 | ~83% | 89.3% | Sangat terkonsentrasi — H3 dengan kontrol ulasan |
+| is_imputed (ulasan==terjual) | Beberapa | 25.2% | Tinggi — sensitifitas wajib |
+| is_official_store | — | 23.3% | Untuk H6 ✅ |
+| Lokasi 'Indonesia' | ~10% | ~5.7% | Exclude dari analisis wilayah |
+| DKI Jakarta dominan | — | 47.5% | Analisis wilayah miring Jakarta |
 
 ---
 
-## Distribusi Kategori (diisi di Fase 0)
+## Distribusi Kategori (dari dbt mart)
 
-| Kategori | Jumlah Listing | % dari Total | Cukup untuk analisis? |
+| Kategori | Jumlah Listing | % dari Total | Status |
 |---|---|---|---|
-| Fashion Wanita | — | — | — |
-| Fashion Pria | — | — | — |
-| Elektronik | — | — | — |
-| Rumah Tangga | — | — | — |
-| Hewan Peliharaan | — | — | — |
-| Lainnya | — | — | — |
+| lainnya | 10.246 | 48.8% | ⚠️ Perlu perbaikan keyword |
+| sepatu_aksesori | 2.698 | 12.9% | ✅ |
+| elektronik | 1.793 | 8.5% | ✅ |
+| rumah_tangga | 1.719 | 8.2% | ✅ |
+| fashion_umum | 1.285 | 6.1% | ✅ |
+| kecantikan | 1.213 | 5.8% | ✅ |
+| fashion_wanita | 689 | 3.3% | ✅ |
+| fashion_pria | 498 | 2.4% | ✅ |
+| makanan_minuman | 488 | 2.3% | ✅ |
+| olahraga | 285 | 1.4% | ✅ |
+| hewan_peliharaan | 62 | 0.3% | ✅ (sedikit) |
+| **Total** | **20.976** | **100%** | |
 
 ---
 
 ## Keputusan Gate
 
-- [ ] **Scope**: Lanjut lintas kategori ✅ (sudah diputuskan — pivot dari fashion-only)
-- [ ] **Stack**: Konfirmasi free tier tools masih available
-- [ ] **Asumsi A1–A3**: Nilai default sudah diisi di `assumptions.md`
+- [x] **Scope**: Lanjut lintas kategori ✅
+- [x] **Deduplication**: 510 baris duplikat di-handle di staging ✅
+- [x] **Stack**: DuckDB + dbt-duckdb 1.10.1 confirmed working ✅
+- [x] **dbt build**: 14/14 PASS ✅
+- [ ] **Kategori coverage**: 51.2% — target ≥ 75% setelah tuning keyword di Fase 3
+- [x] **Asumsi A1–A3**: Draft tersedia di `assumptions.md`
+
+## Aksi Lanjutan (Fase 3)
+
+1. Ekspansi keyword list — terutama untuk `lainnya` (10.246 baris) — target coverage ≥ 75%
+2. Sample 200 listing dari `lainnya` untuk inspeksi manual kategori mana yang dominan
+3. Flag sensitifitas `is_imputed` (25.2%!) — jalankan semua analisis dengan dan tanpa baris ini
+4. Pertimbangkan apakah hewan_peliharaan (62 baris) cukup untuk analisis tersendiri atau gabung ke kategori lain
 
 ---
 
