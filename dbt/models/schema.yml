@@ -1,0 +1,51 @@
+version: 2
+
+models:
+  - name: stg_listings
+    description: "Staging layer — raw CSV parsed dan di-flag. Semua kategori."
+    columns:
+      - name: product_url
+        description: "URL produk (unique identifier)"
+        tests:
+          - not_null
+      - name: harga
+        description: "Harga setelah diskon (IDR)"
+        tests:
+          - not_null
+      - name: terjual
+        description: "Jumlah terjual (parsed dari format 'Xrb+')"
+      - name: diskon_pct
+        description: "Persen diskon (0 jika tidak ada diskon)"
+      - name: rating
+        description: "Rating produk; NULL jika rating=0 dan ulasan=0"
+
+  - name: int_clean_listings
+    description: "Intermediate — exclude placeholder & baris harga=0; normalisasi lokasi → wilayah."
+    columns:
+      - name: product_url
+        tests:
+          - unique
+          - not_null
+      - name: harga
+        tests:
+          - not_null
+      - name: terjual
+        description: "Tidak boleh negatif"
+
+  - name: fct_listing
+    description: "Mart — feature engineering lengkap: kategori, tier harga, flag spesifikasi."
+    columns:
+      - name: product_url
+        tests:
+          - unique
+          - not_null
+      - name: harga
+        tests:
+          - not_null
+      - name: kategori
+        description: "Kategori dari keyword-tagging; 'lainnya' jika tidak ter-match"
+      - name: tier_harga
+        description: "bawah / menengah / atas — quantile per kategori"
+        tests:
+          - accepted_values:
+              values: ['bawah', 'menengah', 'atas']

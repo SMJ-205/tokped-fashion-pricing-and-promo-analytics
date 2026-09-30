@@ -1,0 +1,36 @@
+name: dbt_build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  dbt-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install dbt-duckdb duckdb
+
+      - name: Run dbt build
+        working-directory: dbt/
+        env:
+          RAW_CSV_PATH: "../data/raw/tokopedia_listings.csv"
+        run: dbt build --profiles-dir . --project-dir .
+
+      - name: Upload DuckDB artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tokped-duckdb
+          path: data/tokped.duckdb
+          if-no-files-found: warn

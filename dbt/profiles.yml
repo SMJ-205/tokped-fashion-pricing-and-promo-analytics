@@ -1,0 +1,7 @@
+tokped_analytics:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: ../data/tokped.duckdb
+      threads: 4
