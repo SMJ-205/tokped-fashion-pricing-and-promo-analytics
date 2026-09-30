@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tokopedia E-Commerce Pricing & Promo Analytics</title>
+  <meta name="description" content="Analisis empiris titik jenuh diskon, elastisitas kategori, dan simulator margin promosi e-commerce.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div class="app-container">
+    <!-- Top Header -->
+    <header class="app-header">
+      <div class="header-content">
+        <div class="brand-badge">E-Commerce Analytics Platform</div>
+        <h1>Tokopedia Pricing & Promo Analytics</h1>
+        <p class="subtitle">Analisis empiris titik jenuh diskon, pricing power official store, dan simulator unit economics pada 20.976 listing bersih.</p>
+      </div>
+      <div class="header-actions">
+        <a href="data/dashboard_data.json" target="_blank" class="btn btn-secondary">Unduh JSON Mart</a>
+        <a href="https://github.com/sarifmubdijantika/tokped-fashion-pricing-and-promo-analytics" target="_blank" class="btn btn-primary">Repositori GitHub</a>
+      </div>
+    </header>
+
+    <!-- Top KPI Summary Cards -->
+    <section class="kpi-grid">
+      <div class="kpi-card">
+        <span class="kpi-label">Total Listing Bersih</span>
+        <div class="kpi-value" id="kpi-listings">20.976</div>
+        <span class="kpi-sub">Setelah dedup dan cleaning</span>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-label">Coverage Kategori</span>
+        <div class="kpi-value" id="kpi-coverage">78.99%</div>
+        <span class="kpi-sub">14 Kategori Teridentifikasi</span>
+      </div>
+      <div class="kpi-card highlight">
+        <span class="kpi-label">Titik Jenuh Diskon (H1)</span>
+        <div class="kpi-value">20% - 30%</div>
+        <span class="kpi-sub">Diskon >30% Mengikis Margin</span>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-label">Official Store Premium</span>
+        <div class="kpi-value">+55.4%</div>
+        <span class="kpi-sub">Volume 2.25x Lipat Toko Reguler</span>
+      </div>
+    </section>
+
+    <!-- Navigation Tabs -->
+    <nav class="nav-tabs" id="nav-tabs">
+      <button class="tab-btn active" data-tab="tab-simulator">Simulator Margin Promosi</button>
+      <button class="tab-btn" data-tab="tab-discount">Titik Jenuh Diskon (H1/H2)</button>
+      <button class="tab-btn" data-tab="tab-regional">Peta Harga Regional (H4)</button>
+      <button class="tab-btn" data-tab="tab-store">Official Store & Spesifikasi (H3/H5/H6)</button>
+      <button class="tab-btn" data-tab="tab-explorer">Eksplorasi Listing Data</button>
+    </nav>
+
+    <!-- TAB 1: SIMULATOR MARGIN -->
+    <main class="tab-content active" id="tab-simulator">
+      <div class="grid-layout simulator-layout">
+        <!-- Input Form -->
+        <div class="card form-card">
+          <div class="card-header">
+            <h2>Parameter Produk & Biaya Promosi</h2>
+            <p class="card-desc">Ubah nilai di bawah untuk menguji dampak finansial per unit dan laba kotor total.</p>
+          </div>
+          <div class="card-body">
+            <div class="form-group">
+              <label for="sim-category">Kategori Produk</label>
+              <select id="sim-category" class="form-control"></select>
+            </div>
+
+            <div class="form-group">
+              <label for="sim-normal-price">Harga Coret / Normal (Rp)</label>
+              <input type="number" id="sim-normal-price" class="form-control" value="100000" step="5000">
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <div class="slider-label">
+                  <label for="sim-old-discount">Diskon Saat Ini</label>
+                  <span class="slider-value" id="val-old-discount">35%</span>
+                </div>
+                <input type="range" id="sim-old-discount" min="0" max="70" value="35" step="5">
+              </div>
+
+              <div class="form-group">
+                <div class="slider-label">
+                  <label for="sim-new-discount">Diskon Baru Diuji</label>
+                  <span class="slider-value" id="val-new-discount">20%</span>
+                </div>
+                <input type="range" id="sim-new-discount" min="0" max="70" value="20" step="5">
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="sim-hpp-pct">HPP Pokok (% Harga Normal)</label>
+                <input type="number" id="sim-hpp-pct" class="form-control" value="45" min="10" max="90" step="2.5">
+              </div>
+              <div class="form-group">
+                <label for="sim-fee-pct">Admin Fee Marketplace (%)</label>
+                <input type="number" id="sim-fee-pct" class="form-control" value="6.5" min="0" max="25" step="0.5">
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="sim-packing">Biaya Packing / Unit (Rp)</label>
+                <input type="number" id="sim-packing" class="form-control" value="3000" step="500">
+              </div>
+              <div class="form-group">
+                <label for="sim-base-vol">Volume Penjualan Bulanan (Unit)</label>
+                <input type="number" id="sim-base-vol" class="form-control" value="500" step="50">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Simulation Results -->
+        <div class="card result-card">
+          <div class="card-header">
+            <h2>Hasil Simulasi & Rekomendasi Finansial</h2>
+            <p class="card-desc">Proyeksi volume penjualan menerapkan model saturasi empiris H1.</p>
+          </div>
+          <div class="card-body">
+            <!-- Metric summary cards -->
+            <div class="metrics-row">
+              <div class="mini-metric">
+                <span class="mini-label">Harga Bersih Efektif</span>
+                <div class="mini-val" id="res-price">Rp 80.000</div>
+                <span class="mini-delta" id="delta-price">+Rp 15.000</span>
+              </div>
+              <div class="mini-metric">
+                <span class="mini-label">Margin Bersih / Unit</span>
+                <div class="mini-val" id="res-margin">Rp 26.800</div>
+                <span class="mini-delta positive" id="delta-margin">+13.5% margin</span>
+              </div>
+              <div class="mini-metric highlight">
+                <span class="mini-label">Proyeksi Laba Kotor Bulanan</span>
+                <div class="mini-val" id="res-profit">Rp 13.400.000</div>
+                <span class="mini-delta positive" id="delta-profit">+Rp 4.525.000 / bln</span>
+              </div>
+            </div>
+
+            <!-- Recommendation Alert -->
+            <div id="sim-alert" class="alert-box alert-success">
+              <div class="alert-title" id="alert-title">Rekomendasi Pemangkasan Diskon</div>
+              <p id="alert-desc">Memangkas diskon ke 20% menjaga volume penjualan tetap optimal sekaligus meningkatkan laba kotor per unit secara signifikan.</p>
+            </div>
+
+            <!-- Detailed comparison table -->
+            <div class="table-responsive">
+              <table class="data-table" id="table-comparison">
+                <thead>
+                  <tr>
+                    <th>Komponen Biaya & Metrik</th>
+                    <th>Kondisi Saat Ini</th>
+                    <th>Simulasi Diskon Baru</th>
+                  </tr>
+                </thead>
+                <tbody id="comparison-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- TAB 2: ANALISIS DISKON & TITIK JENUH -->
+    <section class="tab-content" id="tab-discount">
+      <div class="card">
+        <div class="card-header flex-header">
+          <div>
+            <h2>Kurva Penjualan & Titik Jenuh Diskon (H1 & H2)</h2>
+            <p class="card-desc">Analisis membuktikan median penjualan mengalami titik jenuh pada rentang diskon 20-30%.</p>
+          </div>
+          <div class="filter-wrapper">
+            <label for="filter-category-h1">Filter Kategori:</label>
+            <select id="filter-category-h1" class="form-control form-control-sm"></select>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="charts-row">
+            <div class="chart-container">
+              <h3>Median Unit Terjual per Bucket Diskon</h3>
+              <canvas id="chart-median-sold"></canvas>
+            </div>
+            <div class="chart-container">
+              <h3>Rata-rata Unit Terjual (Puncak di 21-30%)</h3>
+              <canvas id="chart-mean-sold"></canvas>
+            </div>
+          </div>
+
+          <div class="table-responsive mt-4">
+            <table class="data-table" id="table-buckets">
+              <thead>
+                <tr>
+                  <th>Bucket Diskon</th>
+                  <th>Jumlah Listing</th>
+                  <th>Median Terjual (Unit)</th>
+                  <th>Rata-rata Terjual (Unit)</th>
+                  <th>Median Harga Jual</th>
+                  <th>Status Kurva Volume</th>
+                </tr>
+              </thead>
+              <tbody id="bucket-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 3: PETA HARGA REGIONAL -->
+    <section class="tab-content" id="tab-regional">
+      <div class="card">
+        <div class="card-header">
+          <h2>Disparitas Penetapan Harga Berdasarkan Wilayah (H4)</h2>
+          <p class="card-desc">Seller di sentra konveksi (Jawa Barat / Bandung) menetapkan median harga fashion yang signifikan lebih murah dibanding DKI Jakarta dan Jawa Tengah.</p>
+        </div>
+        <div class="card-body">
+          <div class="charts-row">
+            <div class="chart-container" style="flex: 1.3;">
+              <h3>Median Harga Produk per Wilayah Utama (Rp)</h3>
+              <canvas id="chart-regional-price"></canvas>
+            </div>
+            <div class="chart-container" style="flex: 1;">
+              <h3>Distribusi Listing & GMV per Wilayah</h3>
+              <div class="table-responsive">
+                <table class="data-table" id="table-regions">
+                  <thead>
+                    <tr>
+                      <th>Wilayah</th>
+                      <th>Jumlah Listing</th>
+                      <th>Median Harga</th>
+                      <th>Total GMV Proxy</th>
+                    </tr>
+                  </thead>
+                  <tbody id="region-tbody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 4: OFFICIAL STORE & SPESIFIKASI -->
+    <section class="tab-content" id="tab-store">
+      <div class="grid-layout two-col">
+        <!-- Official Store Card -->
+        <div class="card">
+          <div class="card-header">
+            <h2>Efek Official Store (H6)</h2>
+            <p class="card-desc">Pengaruh badge resmi terhadap konversi volume dan harga jual produk.</p>
+          </div>
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="data-table" id="table-official-store">
+                <thead>
+                  <tr>
+                    <th>Tipe Toko</th>
+                    <th>Jumlah Listing</th>
+                    <th>Median Harga</th>
+                    <th>Median Terjual</th>
+                    <th>Rata-rata Diskon</th>
+                  </tr>
+                </thead>
+                <tbody id="official-store-tbody"></tbody>
+              </table>
+            </div>
+            <div class="callout-box mt-3">
+              Official Store menikmati median penjualan 2.25x lipat (+125%) dan harga premium +55.4% dibanding toko reguler, didukung oleh promosi berkala yang terencana.
+            </div>
+          </div>
+        </div>
+
+        <!-- Spec in Title Card -->
+        <div class="card">
+          <div class="card-header">
+            <h2>Spesifikasi Produk di Awal Judul (H5)</h2>
+            <p class="card-desc">Pengaruh peletakan nama bahan/ukuran di 30 karakter pertama judul.</p>
+          </div>
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="data-table" id="table-spec-title">
+                <thead>
+                  <tr>
+                    <th>Format Judul</th>
+                    <th>Jumlah Listing</th>
+                    <th>Median Harga</th>
+                    <th>Median Terjual</th>
+                  </tr>
+                </thead>
+                <tbody id="spec-tbody"></tbody>
+              </table>
+            </div>
+            <div class="callout-box mt-3">
+              Pencantuman spesifikasi di awal judul menaikkan volume penjualan median dari 50 ke 90 unit (+80%) pada produk komoditas fast-moving.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Rating vs Price Tier -->
+      <div class="card mt-4">
+        <div class="card-header">
+          <h2>Distribusi Rating Berdasarkan Tier Harga (H3)</h2>
+          <p class="card-desc">Pengujian pada produk dengan reputasi matang (jumlah ulasan minimal 30 listing).</p>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="data-table" id="table-tier-rating">
+              <thead>
+                <tr>
+                  <th>Tier Harga</th>
+                  <th>Jumlah Listing (Ulasan >= 30)</th>
+                  <th>Rata-rata Rating</th>
+                  <th>Median Rating</th>
+                  <th>Standar Deviasi</th>
+                </tr>
+              </thead>
+              <tbody id="tier-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 5: DATA EXPLORER -->
+    <section class="tab-content" id="tab-explorer">
+      <div class="card">
+        <div class="card-header flex-header">
+          <div>
+            <h2>Eksplorasi Data Listing</h2>
+            <p class="card-desc">Sampel 500 listing berkinerja tinggi dari database mart fct_listing.</p>
+          </div>
+          <div class="search-box">
+            <input type="text" id="explorer-search" class="form-control" placeholder="Cari nama produk atau toko...">
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="data-table" id="table-explorer">
+              <thead>
+                <tr>
+                  <th>Nama Produk</th>
+                  <th>Kategori</th>
+                  <th>Nama Toko</th>
+                  <th>Wilayah</th>
+                  <th>Harga Bersih</th>
+                  <th>Diskon</th>
+                  <th>Terjual</th>
+                  <th>Rating</th>
+                  <th>Status Toko</th>
+                </tr>
+              </thead>
+              <tbody id="explorer-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+      <p>Tokopedia Pricing & Promo Analytics. Dibuat dengan DuckDB, dbt Core, dan Vercel Serverless Architecture.</p>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
