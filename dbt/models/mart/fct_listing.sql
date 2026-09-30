@@ -1,6 +1,8 @@
 -- fct_listing.sql
 -- Mart: feature engineering — tagging kategori, spesifikasi di judul,
 --       tier harga per kategori (quantile), dan semua derived metrics.
+-- v2: 14 kategori (dari 10). Keyword rules diperluas dari analisis 10.246 baris 'lainnya'.
+-- Note: DuckDB RE2 syntax — gunakan ' keyword ' (space-padded) bukan \b word boundary.
 
 {{ config(materialized='table') }}
 
@@ -17,86 +19,213 @@ with_category as (
 
         -- ────────────────────────────────────────────────────────────────────
         -- Tagging Kategori (keyword-based, lintas kategori)
-        -- Urutan penting: lebih spesifik dulu, lebih umum belakangan
+        -- Urutan: paling spesifik → paling umum. 'lainnya' = fallback.
         -- ────────────────────────────────────────────────────────────────────
         case
-            -- Hewan Peliharaan (keyword spesifik, harus sebelum "makanan")
+
+            -- ── Hewan Peliharaan ──────────────────────────────────────────────
             when regexp_matches(lower(nama_produk),
-                'makanan kucing|makanan anjing|cat food|dog food|kandang|akuarium|'
-                'pasir kucing|mainan kucing|collar anjing|leash|pakan ikan|'
-                'vitamin kucing|vitamin anjing|grooming kucing|pet carrier')
+                'makanan kucing|makanan anjing|cat food|dog food|pasir kucing|'
+                'mainan kucing|collar anjing|pakan ikan|vitamin kucing|vitamin anjing|'
+                'grooming kucing|pet carrier|cat litter|dog treat|obat kutu|vaksin hewan|'
+                'tempat minum kucing|tempat makan kucing|kandang hamster|akuarium')
             then 'hewan_peliharaan'
 
-            -- Fashion Wanita (spesifik wanita dulu)
+            -- ── Otomotif & Perkakas ───────────────────────────────────────────
             when regexp_matches(lower(nama_produk),
-                '\bgamis\b|\bdress\b|\bhijab\b|pashmina|kebaya|blouse|'
-                '\brok\b|legging|daster|abaya|tunik|mukena|kaftan')
+                'jas hujan|raincoat|mantel hujan|body protector|knee protector|'
+                'sarung tangan motor|jaket motor|'
+                'kunci |gembok|baut |mur |palu |gerinda|bor |perkakas|'
+                'oli motor|oli mobil|minyak rem|kampas rem|helm |spion |knalpot|ban motor|ban mobil|pentil |onderdil|variasi motor|aksesoris motor|karburator|aki motor|aki mobil|'
+                'kunci pas|tang |obeng|mata bor|mata gergaji|hacksaw|'
+                'meteran|waterpass|skun |sekring|fuse |'
+                'kabel aki|lampu motor|lampu mobil|wiper|karpet mobil|'
+                'dongkrak|kompresor|velg |sparepart|spare part|'
+                'vinyl lantai|list plafon| pipa |instalasi|keran |stop kontak|'
+                'saklar |kabel listrik| mcb |kabel roll|fitting lampu|'
+                'cat tembok|cat dinding|kunci pintu| engsel |semen ')
+            then 'otomotif_perkakas'
+
+            -- ── ATK, Kemasan & Perlengkapan Kantor ───────────────────────────
+            when regexp_matches(lower(nama_produk),
+                'buku |novel|komik|al-qur|alquran|majalah|'
+                'buku tulis|buku notes| atk |pulpen|pensil|spidol|stabilo|'
+                'penggaris|penghapus|tip-x|correction pen|kertas hvs|'
+                'kertas label|stiker thermal|barcode|label stiker|'
+                'id card|name tag|cetak pin|pin peniti|'
+                'kantong plastik|plastik kresek|plastik hd|'
+                'kotak kardus|bubble wrap|lakban coklat|lakban bening|'
+                'paper bag|lunch box paper|bento mika|tray bento|'
+                'box nasi|kotak nasi kemasan|food grade|kemasan|packaging')
+            then 'atk_kemasan'
+
+            -- ── Kesehatan & Bayi ──────────────────────────────────────────────
+            when regexp_matches(lower(nama_produk),
+                'masker medis|masker kesehatan|hazmat|sarung tangan medis|'
+                'hand sanitizer|antiseptik|betadine|rivanol|plester luka|'
+                'popok|diapers|pampers|tisu bayi|baby wipes|'
+                'susu formula|susu bayi|mpasi|biskuit bayi|'
+                'dot bayi|botol susu|empeng|teether|stroller|gendongan|'
+                'obat batuk|obat flu|obat demam|suplemen kesehatan|'
+                'alat tensi|termometer|oximeter|nebulizer|'
+                'pembalut|softex|pantyliner|pembalut wanita')
+            then 'kesehatan_bayi'
+
+            -- ── Mainan, Hobi & Perhiasan ──────────────────────────────────────
+            when regexp_matches(lower(nama_produk),
+                'mainan |mobil mainan|mobil-mobilan|motor mainan|playset|building block|'
+                'boneka|action figure|puzzle |lego|'
+                'benang rajut|benang wool|benang wol|jarum rajut|'
+                'cat akrilik|cat minyak| kuas |kanvas lukis|'
+                'emas batangan|logam mulia|antam|lm antam|'
+                'liontin emas|cincin emas|kalung emas|gelang emas|anting emas|'
+                'perhiasan|gelang perak|cincin perak| bros |'
+                'aksesoris rambut|jepit rambut mutiara')
+            then 'mainan_hobi'
+
+            -- ── Fashion Wanita ─────────────────────────────────────────────────
+            when regexp_matches(lower(nama_produk),
+                'gamis|pashmina|pasmina|kebaya|daster|abaya|tunik|mukena|kaftan|'
+                'satin skirt|midi skirt|maxi skirt|corset|bustier|crop top|'
+                'pakaian wanita|baju wanita|atasan wanita|longsleeve wanita|'
+                'dress |hijab |blouse | rok |legging|longsleeve loose')
             then 'fashion_wanita'
 
-            -- Fashion Pria (spesifik pria dulu)
+            -- ── Fashion Pria ───────────────────────────────────────────────────
             when regexp_matches(lower(nama_produk),
                 'kemeja pria|kaos pria|celana pria|batik pria|jaket pria|'
-                'baju koko|sarung\b|boxer|brief pria|polo shirt pria')
+                'baju koko|sarung |boxer pria|brief pria|polo shirt pria|'
+                'pakaian pria|baju pria|atasan pria')
             then 'fashion_pria'
 
-            -- Fashion Umum (gender-neutral / tidak ada label pria/wanita)
+            -- ── Fashion Umum ───────────────────────────────────────────────────
             when regexp_matches(lower(nama_produk),
-                '\bkaos\b|hoodie|sweater|\bjaket\b|t-shirt|tshirt|'
-                '\bkemeja\b|\bjeans\b|\bcelana\b|shorts|\bbaju\b')
+                'kaos |hoodie|sweater|jaket |t-shirt|tshirt|kemeja |jeans |'
+                'celana |shorts|baju |longsleeve |oversized|streetwear|ootd|'
+                'cardigan| vest |polo |henley|flannel|bahan katun|bahan cotton')
             then 'fashion_umum'
 
-            -- Sepatu & Aksesori
+            -- ── Sepatu & Aksesori Fashion ──────────────────────────────────────
             when regexp_matches(lower(nama_produk),
-                '\bsepatu\b|\bsandal\b|\btas\b|\bdompet\b|\btopi\b|'
-                'kacamata|jam tangan|ikat pinggang|\bgelang\b|\bkalung\b|'
-                '\bcincin\b|anting|jepit rambut|scrunchie')
+                'jepit rambut|sisir|hair clip|jedai|wig |'
+                'sepatu |sandal |sling bag|slingbag|tote bag|backpack|ransel |koper|travel bag|selempang|'
+                'dompet |topi |kacamata|jam tangan|ikat pinggang|'
+                'gelang |kalung |cincin |anting |scrunchie|headband|'
+                'ikat rambut|bando |bandana|scarf |payung ')
             then 'sepatu_aksesori'
 
-            -- Elektronik
+            -- ── Elektronik & Gadget ───────────────────────────────────────────
             when regexp_matches(lower(nama_produk),
-                '\bhp\b|handphone|smartphone|\blaptop\b|\btablet\b|'
-                '\bcharger\b|powerbank|earphone|headset|\bspeaker\b|'
-                'keyboard|\bmouse\b|\bram\b|harddisk|\bssd\b|router|'
-                '\bkamera\b|action cam|smartwatch|\btv\b|monitor')
+                'speaker|soundbar|subwoofer|amplifier|microphone|mic wireless|'
+                'handphone|smartphone|laptop|tablet|charger|powerbank|earphone|headset|'
+                'keyboard|harddisk|router|kamera|smartwatch|monitor|'
+                'flashdisk|flash disk|kabel data|kabel lightning|kabel type c|'
+                'kabel lan|rj45|cat6 |mousepad|led strip|cctv|'
+                'baterai |battery|adaptor|converter|galaxy buds|airpods|tws|'
+                'iphone|samsung galaxy|xiaomi|oppo |vivo |realme|'
+                'hair dryer|pengering rambut|speaker bluetooth|speaker aktif|'
+                ' hp |headphone|gaming mouse|gaming keyboard|'
+                'mouse wireless|mouse logitech|mouse bluetooth|wireless mouse|'
+                'logitech|razer |corsair|mechanical keyboard|gaming headset|'
+                'sandisk|seagate|western digital|wd external|toshiba external')
             then 'elektronik'
 
-            -- Kecantikan & Perawatan
+            -- ── Kecantikan & Perawatan ────────────────────────────────────────
             when regexp_matches(lower(nama_produk),
-                'skincare|serum\b|moisturizer|sunscreen|\bspf\b|lipstik|'
-                'maskara|foundation|concealer|sabun muka|\bshampoo\b|'
-                'kondisioner|body lotion|\bparfum\b|deodorant|\btoner\b|'
-                'essence|\bmicellar\b|sheet mask|sleeping mask|lip tint|'
-                'BB cream|CC cream|setting spray|blush on|eyebrow')
+                'skincare|serum |moisturizer|sunscreen| spf |lipstik|'
+                'maskara|foundation|concealer|sabun muka|shampoo|'
+                'kondisioner|body lotion|parfum|deodorant|toner |'
+                'essence|micellar|sheet mask|sleeping mask|lip tint|'
+                'bb cream|cc cream|setting spray|blush on|eyebrow|'
+                'lip cream|lip balm|lip gloss|lip stain|lipstick|'
+                'mascara|eyeliner|eyeshadow|eye shadow|highlighter|'
+                'bronzer|primer |cushion |'
+                'pasta gigi|sikat gigi|mouthwash|obat kumur|'
+                'sabun mandi|body wash|shower gel|lulur |'
+                'deodoran|antiperspirant|'
+                'vitamin rambut|hair mask|hair serum|hair tonic|'
+                'hair oil|minyak rambut|keratin treatment|'
+                'eau de toilette|body mist|body fragrance|perfume|'
+                'gunting kuku|pembersih telinga|masker organik|'
+                'gluta soap|sabun pencerah|sabun pemutih|'
+                'clay mask|masker wajah|facial wash|face wash|'
+                'micellar water|make up|makeup| bpom |'
+                'pelembab bibir|tinted lip|lip care|pelembab wajah|'
+                'face serum|niacinamide|hyaluronic|retinol|ceramide|'
+                'hmns |innisfree|skintific|wardah|maybelline|revlon|pixy|'
+                'madame gie|mineral botanica|ms glow|emina |nacific|'
+                'tinted moisturizer|loose powder|compact powder|no sebum|'
+                'setting powder|translucent powder|face powder')
             then 'kecantikan'
 
-            -- Rumah Tangga
+            -- ── Rumah Tangga ──────────────────────────────────────────────────
             when regexp_matches(lower(nama_produk),
-                '\bpanci\b|\bwajan\b|spatula|\bgelas\b|\bpiring\b|mangkok|'
-                '\bsapu\b|\bpel\b|\bember\b|taplak|\bbantal\b|selimut|\brak\b|'
-                '\blemari\b|\bkursi\b|\bmeja\b|dispenser|blender|rice cooker|'
-                '\bsetrika\b|vacuum cleaner|kipas angin|AC portable')
+                'kompor|regulator gas|tabung gas|tungku|pemantik api|'
+                'tanaman|pot bunga|pot tanaman|pupuk|bibit tanaman|'
+                'kayu jati|pintu kayu|jendela|gantungan kunci|'
+                'panci |wajan |spatula|gelas |piring |mangkok|'
+                'sapu |ember |taplak|bantal |selimut|rak |'
+                'lemari |kursi |meja |dispenser|blender|rice cooker|'
+                'setrika|vacuum cleaner|kipas angin|ac portable|'
+                'lampu |led bulb|downlight|bohlam|fitting |'
+                'karpet |gordyn|tirai |gorden|'
+                'cermin |jam dinding|wall decor|kaligrafi|'
+                'tissue |tisu |tempat tisu|tempat sabun|'
+                'tumbler|botol minum|termos |'
+                'kotak makan|lunch box|tempat makan|food container|'
+                'sendok garpu|pisau dapur|talenan|toples |'
+                'handuk |sabun cuci|deterjen|pewangi pakaian|'
+                'rak sepatu|gantungan baju|clothes hanger|'
+                'sofa |furniture|lemari pakaian|meja makan|'
+                'springbed|kasur |guling |bed cover|sprei|'
+                'sikat toilet|sikat wc|pel lantai|sapu lantai|'
+                'ranjang|dipan |nakas |meja rias|meja belajar|'
+                'kursi lipat|tangga lipat|rak dinding|'
+                'dekorasi rumah|hiasan rumah|wallpaper sticker|'
+                'tempat tidur|lampu tidur|lampu kamar|'
+                'tong sampah|tempat sampah|sikat lantai|'
+                'celemek|apron |keset |lap tangan|lap piring|'
+                'alat masak|perlengkapan masak|peralatan dapur|'
+                'wajan anti lengket|kompor listrik|rice box|'
+                'rak dapur|organizer dapur|tempat bumbu|'
+                'spons cuci|scotch brite|sabun piring|'
+                'sarung bantal|sarung guling|bed sheet|'
+                'keramik |lemari es mini|kulkas mini')
             then 'rumah_tangga'
 
-            -- Olahraga
+            -- ── Olahraga & Fitness ────────────────────────────────────────────
             when regexp_matches(lower(nama_produk),
-                '\braket\b|\bbola\b|sepatu olahraga|dumbbell|matras\b|'
-                '\bjersey\b|celana olahraga|tas gym|\bsepeda\b|treadmill|'
-                '\bgym\b|resistance band|protein|whey|skipping|badminton')
+                'raket |sepatu olahraga|dumbbell|matras |jersey |'
+                'celana olahraga|tas gym|sepeda |treadmill|gym |'
+                'resistance band|protein |whey |skipping|badminton|'
+                'headband tennis|sepatu lari|sepatu futsal|bola basket|'
+                'bola sepak|bola voli|renang|kacamata renang|'
+                'yoga mat|foam roller|jump rope|pull up bar|'
+                'jersey bola|jersey futsal|glove tinju|samsak')
             then 'olahraga'
 
-            -- Makanan & Minuman
+            -- ── Makanan & Minuman ──────────────────────────────────────────────
             when regexp_matches(lower(nama_produk),
-                '\bsnack\b|\bkopi\b|\bteh\b|\bcokelat\b|\bmie\b|\bberas\b|'
-                '\bbumbu\b|\bsaus\b|\bminuman\b|\bcemilan\b|\bkue\b|\broti\b|'
-                'keripik|crackers|biskuit|granola|madu|susu\b|yogurt')
+                'snack |kopi |teh |cokelat|indomie|mie goreng|mie sedap|mie instant|'
+                'gula pasir|gula merah|tepung |minyak goreng|'
+                'kecap |saus sambal|sambal|royco|masako|penyedap|'
+                'basreng|cireng|siomay|dimsum |keripik|crackers|biskuit|'
+                'daging sapi|daging ayam|sei sapi|iga sapi|tulang iga|'
+                'alpukat|buah |jeruk |timun |labu |kentang |'
+                'frozen food|bakso |nugget|sosis |beras |'
+                'jamu |herbal |madu hutan|suplemen makanan|'
+                'jelly candy|dodol|rumput laut|'
+                'sayuran|benih |bibit |daging paha|fillet|sukiyaki|'
+                'alpukat frozen|buah beku|minuman |cemilan |kue |roti |'
+                'granola|yogurt|susu |madu |snack')
             then 'makanan_minuman'
 
             else 'lainnya'
+
         end                                                             as kategori,
 
         -- ────────────────────────────────────────────────────────────────────
         -- Tagging Spesifikasi/Material di Judul (untuk H5)
-        -- Deteksi apakah kata kunci spesifikasi ada di seluruh judul
         -- ────────────────────────────────────────────────────────────────────
         regexp_matches(
             lower(nama_produk),
@@ -105,7 +234,7 @@ with_category as (
             'spandex|viscose|bamboo fiber|microfiber'
         )                                                               as has_spec_keyword,
 
-        -- Apakah spesifikasi ada di 3 kata PERTAMA (posisi awal judul = H5)
+        -- Spesifikasi di 3 kata PERTAMA (H5: posisi keyword di judul)
         regexp_matches(
             lower(
                 split_part(nama_produk, ' ', 1) || ' ' ||
@@ -127,7 +256,6 @@ with_price_tier as (
         *,
 
         -- Tier harga per kategori (quantile N-tile 3)
-        -- Produk dengan harga_normal null → tier null
         case
             when harga_normal is null or harga_normal = 0 then null
             else ntile(3) over (
