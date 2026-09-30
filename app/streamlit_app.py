@@ -243,8 +243,7 @@ with tab_sim:
 with tab_discount:
     st.subheader("Kurva Penjualan & Titik Jenuh Diskon (H1 & H2)")
     st.markdown("""
-    **Insight Utama H1:** Tokopedia seller sering memberikan diskon >30%, namun secara statistik **median volume penjualan stagnan di 100 unit** pada semua tier diskon di atas 10%, dan rata-rata volume memuncak di 21-30%.
-    Diskon berlebih (>30%) mengikis margin tanpa memberikan tambahan penjualan yang proporsional.
+    **Insight Utama H1:** Diskon taktis awal (1–10%) menggandakan porsi listing laris (11,6% ke 22,8%). Namun di atas 20%, median bertahan flat di 100 unit (artefak pembulatan platform) dan tambahan volume penjualan tidak sepadan dengan margin yang dikorbankan.
     """)
 
     col_cat_filter, col_opt = st.columns([1, 2])
@@ -299,7 +298,7 @@ with tab_discount:
 with tab_region:
     st.subheader("Analisis Penetapan Harga Berdasarkan Wilayah (H4)")
     st.markdown("""
-    **Insight Utama H4:** Wilayah sentra konveksi (Jawa Barat / Bandung) menetapkan median harga fashion yang signifikan lebih rendah dibanding DKI Jakarta dan wilayah luar Jawa (p < 0.001).
+    **Insight Utama H4:** Analisis pakaian (pakaian saja, mapping kabupaten): Jawa Timur (Rp 95,5rb) dan DKI Jakarta (Rp 99rb) mencatat median harga pakaian lebih terjangkau dibanding Jawa Barat (Rp 104rb) dan Jawa Tengah (Rp 107rb) (p = 0.018).
     """)
 
     valid_region_df = df[~df['wilayah'].isin(['Tidak Diketahui', 'Indonesia'])].copy()
@@ -359,7 +358,7 @@ with tab_store:
             'mean_diskon': 'Rata-rata Diskon (%)'
         }), hide_index=True, width=450)
 
-        st.info("Official store memiliki median penjualan 2.25x lipat (+125%) dan harga premium +55.4% dibanding toko reguler.")
+        st.info("Official store memiliki median penjualan 2.25x lipat (+125%) dan unggul volume di 11 dari 12 kategori. Premium harga agregat +55.4% bervariasi luas per kategori (-20% hingga +413%) sebagian besar akibat efek bauran kategori.")
 
     with c2:
         st.markdown("#### H5: Spesifikasi Produk di Awal Judul")

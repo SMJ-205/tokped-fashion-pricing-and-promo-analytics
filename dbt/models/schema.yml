@@ -10,7 +10,7 @@ models:
           - unique
           - not_null
       - name: product_url
-        description: "URL produk (bisa truncated ke URL toko untuk ~73 baris)"
+        description: "URL produk (bisa truncated ke URL toko untuk 237 baris di mart / 2.222 di raw)"
         tests:
           - not_null
       - name: harga

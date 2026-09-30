@@ -269,10 +269,12 @@ function renderDiscountCharts() {
   // Render Table with smooth row animation
   const tbody = document.getElementById('bucket-tbody');
   tbody.innerHTML = bucketData.map(b => {
-    let statusBadge = '<span class="badge badge-info">Normal</span>';
-    if (b.bucket_diskon === '0%') statusBadge = '<span class="badge badge-warning">Baseline</span>';
-    if (b.bucket_diskon === '21-30%') statusBadge = '<span class="badge badge-success">Puncak Rata-rata</span>';
-    if (b.bucket_diskon === '31-50%' || b.bucket_diskon === '>50%') statusBadge = '<span class="badge badge-warning">Titik Jenuh</span>';
+    let statusBadge = '<span class="badge badge-info">Optimal Margin</span>';
+    if (b.bucket_diskon === '0%') statusBadge = '<span class="badge badge-warning">Baseline (26 unit)</span>';
+    if (b.bucket_diskon === '1-10%') statusBadge = '<span class="badge badge-success">Lonjakan Utama (2x Laris)</span>';
+    if (b.bucket_diskon === '11-20%') statusBadge = '<span class="badge badge-info">Optimal Margin</span>';
+    if (b.bucket_diskon === '21-30%') statusBadge = '<span class="badge badge-warning">Plateau Volume</span>';
+    if (b.bucket_diskon === '31-50%' || b.bucket_diskon === '>50%') statusBadge = '<span class="badge badge-danger">Margin Burn</span>';
 
     return `
       <tr>
