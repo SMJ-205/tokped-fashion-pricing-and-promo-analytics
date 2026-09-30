@@ -1,6 +1,6 @@
 /**
  * app.js - Tokopedia E-Commerce Pricing & Promo Analytics
- * Client-side reactive logic for Vercel deployment
+ * Client-side reactive logic for Vercel deployment with smooth transitions
  */
 
 let appData = null;
@@ -30,7 +30,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupDataExplorer();
 });
 
-// Tab Navigation
+// Tab Navigation with Smooth Transition
 function setupTabs() {
   const tabs = document.querySelectorAll('.tab-btn');
   tabs.forEach(tab => {
@@ -44,6 +44,13 @@ function setupTabs() {
       if (targetContent) {
         targetContent.classList.add('active');
       }
+
+      // Smoothly resize charts on newly visible tab
+      setTimeout(() => {
+        if (chartMedian) chartMedian.resize();
+        if (chartMean) chartMean.resize();
+        if (chartRegional) chartRegional.resize();
+      }, 50);
     });
   });
 }
@@ -108,7 +115,6 @@ function setupSimulator() {
     input.addEventListener('input', calculateSimulation);
   });
 
-  // Calculate Initial Simulation
   calculateSimulation();
 }
 
@@ -154,19 +160,30 @@ function calculateSimulation() {
   const diffMarginRp = newMarginRp - oldMarginRp;
   const diffMarginPct = newMarginPct - oldMarginPct;
 
-  // Update Mini Metrics
-  document.getElementById('res-price').textContent = formatRupiah(newPrice);
+  // Update Mini Metrics with Smooth Pulse Animation
+  const resPriceEl = document.getElementById('res-price');
+  const resMarginEl = document.getElementById('res-margin');
+  const resProfitEl = document.getElementById('res-profit');
+  const deltaMarginEl = document.getElementById('delta-margin');
+  const deltaProfitEl = document.getElementById('delta-profit');
+
+  resPriceEl.textContent = formatRupiah(newPrice);
   document.getElementById('delta-price').textContent = (newPrice >= oldPrice ? '+' : '') + formatRupiah(newPrice - oldPrice);
 
-  const deltaMarginEl = document.getElementById('delta-margin');
-  document.getElementById('res-margin').textContent = formatRupiah(newMarginRp);
+  resMarginEl.textContent = formatRupiah(newMarginRp);
   deltaMarginEl.textContent = (diffMarginPct >= 0 ? '+' : '') + diffMarginPct.toFixed(1) + '% margin';
   deltaMarginEl.className = 'mini-delta ' + (diffMarginPct >= 0 ? 'positive' : 'negative');
 
-  const deltaProfitEl = document.getElementById('delta-profit');
-  document.getElementById('res-profit').textContent = formatRupiah(newTotalProfit);
+  resProfitEl.textContent = formatRupiah(newTotalProfit);
   deltaProfitEl.textContent = (diffProfit >= 0 ? '+' : '') + formatRupiah(diffProfit) + ' / bln';
   deltaProfitEl.className = 'mini-delta ' + (diffProfit >= 0 ? 'positive' : 'negative');
+
+  // Trigger subtle tactile pulse
+  [resPriceEl, resMarginEl, resProfitEl].forEach(el => {
+    el.classList.remove('pulse-change');
+    void el.offsetWidth;
+    el.classList.add('pulse-change');
+  });
 
   // Recommendation Box
   const alertBox = document.getElementById('sim-alert');
@@ -212,7 +229,7 @@ function calculateSimulation() {
   `).join('');
 }
 
-// Discount Analytics (H1 & H2)
+// Discount Analytics (H1 & H2) with Smooth Morphing Charts
 function setupDiscountAnalytics() {
   if (!appData) return;
 
@@ -249,7 +266,7 @@ function renderDiscountCharts() {
   const medianSold = bucketData.map(b => b.median_terjual);
   const meanSold = bucketData.map(b => b.mean_terjual);
 
-  // Render Table
+  // Render Table with smooth row animation
   const tbody = document.getElementById('bucket-tbody');
   tbody.innerHTML = bucketData.map(b => {
     let statusBadge = '<span class="badge badge-info">Normal</span>';
@@ -269,80 +286,96 @@ function renderDiscountCharts() {
     `;
   }).join('');
 
-  // Destroy previous charts
-  if (chartMedian) chartMedian.destroy();
-  if (chartMean) chartMean.destroy();
-
-  // Chart 1: Median Sold
-  const ctxMedian = document.getElementById('chart-median-sold').getContext('2d');
-  chartMedian = new Chart(ctxMedian, {
-    type: 'bar',
-    data: {
-      labels: labels,
-      datasets: [{
-        label: 'Median Terjual (Unit)',
-        data: medianSold,
-        backgroundColor: '#4f46e5',
-        borderRadius: 4
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false }
+  // Smooth Chart 1: Median Sold
+  if (chartMedian) {
+    chartMedian.data.labels = labels;
+    chartMedian.data.datasets[0].data = medianSold;
+    chartMedian.update();
+  } else {
+    const ctxMedian = document.getElementById('chart-median-sold').getContext('2d');
+    chartMedian = new Chart(ctxMedian, {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: 'Median Terjual (Unit)',
+          data: medianSold,
+          backgroundColor: '#4f46e5',
+          borderRadius: 4
+        }]
       },
-      scales: {
-        y: {
-          beginAtZero: true,
-          grid: { color: 'rgba(255, 255, 255, 0.05)' },
-          ticks: { color: '#94a3b8' }
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: {
+          duration: 450,
+          easing: 'easeOutQuart'
         },
-        x: {
-          grid: { display: false },
-          ticks: { color: '#94a3b8' }
+        plugins: {
+          legend: { display: false }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+            ticks: { color: '#94a3b8' }
+          },
+          x: {
+            grid: { display: false },
+            ticks: { color: '#94a3b8' }
+          }
         }
       }
-    }
-  });
+    });
+  }
 
-  // Chart 2: Mean Sold
-  const ctxMean = document.getElementById('chart-mean-sold').getContext('2d');
-  chartMean = new Chart(ctxMean, {
-    type: 'line',
-    data: {
-      labels: labels,
-      datasets: [{
-        label: 'Rata-rata Terjual (Unit)',
-        data: meanSold,
-        borderColor: '#ef4444',
-        backgroundColor: 'rgba(239, 68, 68, 0.1)',
-        borderWidth: 2,
-        fill: true,
-        tension: 0.3,
-        pointBackgroundColor: '#ef4444',
-        pointRadius: 4
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false }
+  // Smooth Chart 2: Mean Sold
+  if (chartMean) {
+    chartMean.data.labels = labels;
+    chartMean.data.datasets[0].data = meanSold;
+    chartMean.update();
+  } else {
+    const ctxMean = document.getElementById('chart-mean-sold').getContext('2d');
+    chartMean = new Chart(ctxMean, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: 'Rata-rata Terjual (Unit)',
+          data: meanSold,
+          borderColor: '#ef4444',
+          backgroundColor: 'rgba(239, 68, 68, 0.1)',
+          borderWidth: 2,
+          fill: true,
+          tension: 0.3,
+          pointBackgroundColor: '#ef4444',
+          pointRadius: 4
+        }]
       },
-      scales: {
-        y: {
-          beginAtZero: true,
-          grid: { color: 'rgba(255, 255, 255, 0.05)' },
-          ticks: { color: '#94a3b8' }
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: {
+          duration: 450,
+          easing: 'easeOutQuart'
         },
-        x: {
-          grid: { display: false },
-          ticks: { color: '#94a3b8' }
+        plugins: {
+          legend: { display: false }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+            ticks: { color: '#94a3b8' }
+          },
+          x: {
+            grid: { display: false },
+            ticks: { color: '#94a3b8' }
+          }
         }
       }
-    }
-  });
+    });
+  }
 }
 
 // Regional Analytics (H4)
@@ -353,7 +386,6 @@ function setupRegionalAnalytics() {
   const labels = topRegions.map(r => r.wilayah);
   const prices = topRegions.map(r => r.median_harga);
 
-  // Render Table
   const tbody = document.getElementById('region-tbody');
   tbody.innerHTML = topRegions.map(r => `
     <tr>
@@ -364,41 +396,50 @@ function setupRegionalAnalytics() {
     </tr>
   `).join('');
 
-  if (chartRegional) chartRegional.destroy();
-  const ctx = document.getElementById('chart-regional-price').getContext('2d');
-  chartRegional = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: labels,
-      datasets: [{
-        label: 'Median Harga (Rp)',
-        data: prices,
-        backgroundColor: '#0d9488',
-        borderRadius: 4
-      }]
-    },
-    options: {
-      indexAxis: 'y',
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false }
+  if (chartRegional) {
+    chartRegional.data.labels = labels;
+    chartRegional.data.datasets[0].data = prices;
+    chartRegional.update();
+  } else {
+    const ctx = document.getElementById('chart-regional-price').getContext('2d');
+    chartRegional = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: 'Median Harga (Rp)',
+          data: prices,
+          backgroundColor: '#0d9488',
+          borderRadius: 4
+        }]
       },
-      scales: {
-        x: {
-          grid: { color: 'rgba(255, 255, 255, 0.05)' },
-          ticks: {
-            color: '#94a3b8',
-            callback: (v) => 'Rp ' + (v / 1000) + 'k'
-          }
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: {
+          duration: 450,
+          easing: 'easeOutQuart'
         },
-        y: {
-          grid: { display: false },
-          ticks: { color: '#94a3b8' }
+        plugins: {
+          legend: { display: false }
+        },
+        scales: {
+          x: {
+            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+            ticks: {
+              color: '#94a3b8',
+              callback: (v) => 'Rp ' + (v / 1000) + 'k'
+            }
+          },
+          y: {
+            grid: { display: false },
+            ticks: { color: '#94a3b8' }
+          }
         }
       }
-    }
-  });
+    });
+  }
 }
 
 // Store & Format Analytics (H3, H5, H6)
@@ -447,7 +488,7 @@ function setupStoreAnalytics() {
   `).join('');
 }
 
-// Data Explorer
+// Data Explorer with Live Search
 function setupDataExplorer() {
   if (!appData || !appData.sample_listings) return;
 
