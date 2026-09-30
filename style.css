@@ -236,6 +236,10 @@ body {
   border-radius: 12px;
   padding: 24px;
   margin-bottom: 24px;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
 .card-header {
@@ -266,17 +270,23 @@ body {
 .grid-layout {
   display: grid;
   gap: 24px;
+  width: 100%;
+}
+
+.grid-layout > * {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .simulator-layout {
-  grid-template-columns: 1fr 1.35fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr);
 }
 
 .two-col {
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
 }
 
-@media (max-width: 960px) {
+@media (max-width: 1080px) {
   .simulator-layout, .two-col {
     grid-template-columns: 1fr;
   }
@@ -501,14 +511,26 @@ input[type="range"] {
 /* Charts */
 .charts-row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 20px;
+  width: 100%;
 }
 
-@media (max-width: 860px) {
+.charts-row > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+@media (max-width: 1080px) {
   .charts-row {
     grid-template-columns: 1fr;
   }
+}
+
+.two-col .data-table th,
+.two-col .data-table td {
+  padding: 9px 10px;
+  font-size: 0.82rem;
 }
 
 .chart-container {
