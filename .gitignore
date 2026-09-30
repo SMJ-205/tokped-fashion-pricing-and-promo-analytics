@@ -1,5 +1,6 @@
 data/raw/
 data/tokped.duckdb
+data/*.csv
 dbt/target/
 dbt/dbt_packages/
 dbt/logs/
