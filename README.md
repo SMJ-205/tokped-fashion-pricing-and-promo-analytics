@@ -1,12 +1,12 @@
 # Tokopedia E-Commerce Pricing & Promo Analytics
 
-> **Status Proyek**: ✅ **Selesai (Fase 0 - Fase 6)**
+> **Status Proyek**: **Selesai (Fase 0 - Fase 6)**
 > **Scope**: Lintas Kategori (20.976 listing bersih Tokopedia di 14 kategori produk)
 > **Stack**: DuckDB + dbt Core 1.9.4 + Python + Streamlit Community Cloud
 
 ---
 
-## 🎯 Pertanyaan Bisnis & Tiga Temuan Kunci
+## Pertanyaan Bisnis & Tiga Temuan Kunci
 
 ### 1. Di diskon berapa penjualan berhenti naik?
 > **Jawaban: Diskon 1–10% memberikan dorongan volume terbesar; di atas 20%, tambahan volume tidak sepadan dengan margin yang dikorbankan.**
@@ -29,7 +29,7 @@
 
 ---
 
-## 💡 Rekomendasi Strategis
+## Rekomendasi Strategis
 
 | No | Rekomendasi Tindakan | Hipotesis Pendukung | Estimasi Dampak | Tingkat Keyakinan | Cara Validasi di Dunia Nyata |
 |---|---|---|---|---|---|
@@ -40,10 +40,11 @@
 
 ---
 
-## 🖥️ Live Simulator & Artifacts
+## Live Simulator & Artifacts
 
 | Artifact | Deskripsi | Lokasi / Link |
 |---|---|---|
+| **Slide Presentasi (Google Slides)** | Deck presentasi business analytics & portofolio eksekutif | [Google Slides Presentation](https://docs.google.com/presentation/d/1IlnnU1m7jjdqyjmsLOqFnLdQxVT99lUOQarIKMo6fO8/preview?slide=id.p12) |
 | **Web Dashboard** | Interactive Web Dashboard (Vercel deployment) dengan unit economics simulator | `index.html`, `app.js`, `style.css` |
 | **Margin Simulator App** | Interactive Streamlit Dashboard & Unit Economics Simulator | `app/streamlit_app.py` |
 | **Data Mart Export** | Clean analytical dataset siap sambung ke BI tools (Tableau/Looker) | `data/fct_listing.csv` (6.0 MB, 20.976 baris) |
@@ -55,7 +56,7 @@
 
 ---
 
-## ⚠️ Keterbatasan Data
+## Keterbatasan Data
 
 1. **Funnel Pembersihan & Sampel**: Dari 29.519 baris raw, 7.976 baris (27,0%) adalah placeholder halaman pencarian/kategori dan akun `Tokopedia Seller` yang dibuang, sehingga mart akhir merepresentasikan 71,1% listing valid (20.976 baris).
 2. **Artefak Bin Penjualan Platform**: Sekitar 40% nilai metrik `terjual` berupa format pembulatan platform (misal `100+ terjual`, `1rb+ terjual`), di mana 10–13% listing di setiap bucket diskon bernilai tepat 100.
@@ -68,7 +69,7 @@
 
 ---
 
-## 🏗️ Arsitektur & Cara Menjalankan Ulang
+## Arsitektur & Cara Menjalankan Ulang
 
 ```
 Raw CSV (Kaggle Tokopedia Listings - 29.519 baris)
